@@ -10,8 +10,8 @@ class WelcomeScreen extends StatefulWidget {
 }
 
 class _WelcomeScreenState extends State<WelcomeScreen> {
-  int _countdown = 8;
-  late Timer _timer;
+  int _countdown = 3;
+  Timer? _timer;
 
   @override
   void initState() {
@@ -19,82 +19,80 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     _startCountdown();
   }
 
-  @override
-  void dispose() {
-    _timer.cancel();
-    super.dispose();
-  }
-
   void _startCountdown() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        if (_countdown > 0) {
+      if (_countdown > 0) {
+        setState(() {
           _countdown--;
-        } else {
-          _timer.cancel();
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-          );
-        }
-      });
+        });
+      } else {
+        timer.cancel();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
     });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.movie,
-                size: 100,
-                color: Colors.white,
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Welcome to Movies App!',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Your movie journey begins here.',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.white70,
-                ),
-              ),
-              const SizedBox(height: 48),
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.movie,
+              size: 100,
+              color: Colors.white,
+            ),
+            const SizedBox(height: 32),
+            Text(
+              'Movies App',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     color: Colors.white,
-                    width: 3,
+                    fontWeight: FontWeight.bold,
                   ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Your movie journey begins here',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.white70,
+              ),
+            ),
+            const SizedBox(height: 48),
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white,
+                  width: 2,
                 ),
-                child: Center(
-                  child: Text(
-                    _countdown.toString(),
-                    style: const TextStyle(
-                      fontSize: 48,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+              ),
+              child: Center(
+                child: Text(
+                  '$_countdown',
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

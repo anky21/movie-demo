@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import '../models/movie.dart';
 import '../services/tmdb_service.dart';
+import '../screens/movie_detail_screen.dart';
 
 class MovieCard extends StatelessWidget {
   final Movie movie;
@@ -21,7 +22,12 @@ class MovieCard extends StatelessWidget {
     
     return GestureDetector(
       onTap: () {
-        // TODO: Navigate to movie details
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MovieDetailScreen(movie: movie),
+          ),
+        );
       },
       child: Container(
         width: cardWidth,

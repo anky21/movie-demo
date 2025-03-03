@@ -1,27 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'screens/onboarding/onboarding_step1.dart';
-import 'screens/onboarding/onboarding_step2.dart';
-import 'screens/onboarding/onboarding_step3.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/home_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-    ),
-  );
-  runApp(const MyApp());
+  
+  // Get the launch count
+  final prefs = await SharedPreferences.getInstance();
+  final launchCount = prefs.getInt('launch_count') ?? 0;
+  
+  // Increment and save the launch count
+  await prefs.setInt('launch_count', launchCount + 1);
+  
+  runApp(MyApp(showWelcome: launchCount < 3));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool showWelcome;
+
+  const MyApp({
+    Key? key,
+    required this.showWelcome,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+      ),
+    );
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Movies App',
@@ -30,14 +41,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         scaffoldBackgroundColor: Colors.black,
       ),
-      initialRoute: '/onboarding/step1',
-      routes: {
-        '/onboarding/step1': (context) => const OnboardingStep1(),
-        '/onboarding/step2': (context) => const OnboardingStep2(),
-        '/onboarding/step3': (context) => const OnboardingStep3(),
-        '/welcome': (context) => const WelcomeScreen(),
-        '/home': (context) => const HomeScreen(),
-      },
+      home: showWelcome ? const WelcomeScreen() : const HomeScreen(),
     );
   }
 }

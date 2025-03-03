@@ -35,4 +35,18 @@ class TMDBService {
     );
     return json.decode(response.body);
   }
+
+  Future<Map<String, dynamic>> getMovieDetails(int movieId) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/movie/$movieId?api_key=$_apiKey'),
+    );
+    return json.decode(response.body);
+  }
+
+  Future<Map<String, dynamic>> getMovieVideos(int movieId) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/movie/$movieId/videos?api_key=$_apiKey'),
+    );
+    return json.decode(response.body);
+  }
 } 
