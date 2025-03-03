@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/movie.dart';
 import '../services/tmdb_service.dart';
 import '../widgets/movie_card.dart';
+import 'dart:async';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -13,14 +14,47 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final TMDBService _tmdbService = TMDBService();
+  final ScrollController _scrollController = ScrollController();
   List<Movie> _trendingMovies = [];
   List<Movie> _popularMovies = [];
   bool _isLoading = true;
+  Timer? _autoScrollTimer;
 
   @override
   void initState() {
     super.initState();
     _loadMovies();
+    _setupAutoScroll();
+  }
+
+  @override
+  void dispose() {
+    _autoScrollTimer?.cancel();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _setupAutoScroll() {
+    _autoScrollTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (_scrollController.hasClients) {
+        final double currentPosition = _scrollController.offset;
+        final double maxScrollExtent = _scrollController.position.maxScrollExtent;
+        
+        if (currentPosition >= maxScrollExtent) {
+          _scrollController.animateTo(
+            0,
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeOut,
+          );
+        } else {
+          _scrollController.animateTo(
+            currentPosition + 208.0, // cardWidth(200) + horizontal margin(8)
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeOut,
+          );
+        }
+      }
+    });
   }
 
   Future<void> _loadMovies() async {
@@ -78,11 +112,12 @@ class _HomeScreenState extends State<HomeScreen> {
             : RefreshIndicator(
                 onRefresh: _loadMovies,
                 child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.all(16.0),
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                         child: Text(
                           'Trending Now',
                           style: GoogleFonts.poppins(
@@ -93,24 +128,22 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       SizedBox(
-                        height: 350,
+                        height: 340,
                         child: ListView.builder(
+                          controller: _scrollController,
                           scrollDirection: Axis.horizontal,
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           itemCount: _trendingMovies.length,
                           itemBuilder: (context, index) {
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              child: MovieCard(
-                                movie: _trendingMovies[index],
-                                isLarge: true,
-                              ),
+                            return MovieCard(
+                              movie: _trendingMovies[index],
+                              isLarge: true,
                             );
                           },
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.all(16.0),
+                        padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
                         child: Text(
                           'Popular Movies',
                           style: GoogleFonts.poppins(
@@ -120,23 +153,27 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                       ),
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.7,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          padding: const EdgeInsets.all(8),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 0.6,
+                            crossAxisSpacing: 8,
+                            mainAxisSpacing: 16,
+                          ),
+                          itemCount: _popularMovies.length,
+                          itemBuilder: (context, index) {
+                            return MovieCard(
+                              movie: _popularMovies[index],
+                            );
+                          },
                         ),
-                        itemCount: _popularMovies.length,
-                        itemBuilder: (context, index) {
-                          return MovieCard(
-                            movie: _popularMovies[index],
-                          );
-                        },
                       ),
+                      const SizedBox(height: 16),
                     ],
                   ),
                 ),
