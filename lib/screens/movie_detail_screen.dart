@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import '../models/movie.dart';
 import '../services/tmdb_service.dart';
 
@@ -21,12 +21,19 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   Map<String, dynamic>? _movieDetails;
-  String? _trailerUrl;
+  String? _trailerKey;
+  YoutubePlayerController? _youtubeController;
 
   @override
   void initState() {
     super.initState();
     _loadMovieDetails();
+  }
+
+  @override
+  void dispose() {
+    _youtubeController?.close();
+    super.dispose();
   }
 
   Future<void> _loadMovieDetails() async {
@@ -44,7 +51,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         
         if (trailers.isNotEmpty) {
           trailerKey = trailers.first['key'];
-          _trailerUrl = 'https://www.youtube.com/watch?v=$trailerKey';
+          if (trailerKey != null) {
+            _trailerKey = trailerKey;
+            _initializeYoutubePlayer(trailerKey);
+          }
         }
       }
 
@@ -60,33 +70,15 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     }
   }
 
-  Future<void> _openTrailer() async {
-    if (_trailerUrl != null) {
-      final Uri url = Uri.parse(_trailerUrl!);
-      try {
-        // First try to launch in YouTube app
-        final youtubeAppUrl = Uri.parse('youtube://${url.host}${url.path}?${url.query}');
-        if (await canLaunchUrl(youtubeAppUrl)) {
-          await launchUrl(youtubeAppUrl);
-        } else {
-          // Fallback to browser
-          if (await canLaunchUrl(url)) {
-            await launchUrl(
-              url,
-              mode: LaunchMode.externalApplication,
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Could not open trailer')),
-            );
-          }
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open trailer')),
-        );
-      }
-    }
+  void _initializeYoutubePlayer(String videoId) {
+    _youtubeController = YoutubePlayerController.fromVideoId(
+      videoId: videoId,
+      params: const YoutubePlayerParams(
+        showControls: true,
+        showFullscreenButton: true,
+        mute: false,
+      ),
+    );
   }
 
   @override
@@ -100,40 +92,30 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               : CustomScrollView(
                   slivers: [
                     SliverAppBar(
-                      expandedHeight: 400,
+                      expandedHeight: _trailerKey != null ? 300 : 400,
                       pinned: true,
                       leading: IconButton(
                         icon: const Icon(Icons.arrow_back),
                         onPressed: () => Navigator.pop(context),
                       ),
                       flexibleSpace: FlexibleSpaceBar(
-                        background: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            Image.network(
-                              TMDBService.getImageUrl(widget.movie.backdropPath ?? widget.movie.posterPath),
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: Colors.grey[900],
-                                  child: const Center(
-                                    child: Icon(Icons.error_outline, color: Colors.white, size: 48),
-                                  ),
-                                );
-                              },
-                            ),
-                            if (_trailerUrl != null)
-                              Positioned(
-                                bottom: 16,
-                                right: 16,
-                                child: FloatingActionButton(
-                                  onPressed: _openTrailer,
-                                  backgroundColor: Colors.red,
-                                  child: const Icon(Icons.play_arrow),
-                                ),
+                        background: _trailerKey != null && _youtubeController != null
+                            ? YoutubePlayer(
+                                controller: _youtubeController!,
+                                aspectRatio: 16 / 9,
+                              )
+                            : Image.network(
+                                TMDBService.getImageUrl(widget.movie.backdropPath ?? widget.movie.posterPath),
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: Colors.grey[900],
+                                    child: const Center(
+                                      child: Icon(Icons.error_outline, color: Colors.white, size: 48),
+                                    ),
+                                  );
+                                },
                               ),
-                          ],
-                        ),
                       ),
                     ),
                     SliverToBoxAdapter(
