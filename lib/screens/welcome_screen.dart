@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'home_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
@@ -19,18 +20,22 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     _startCountdown();
   }
 
-  void _startCountdown() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+  void _startCountdown() async {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       if (_countdown > 0) {
         setState(() {
           _countdown--;
         });
       } else {
         timer.cancel();
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        
+        // Mark welcome screen as seen for this session
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('hasSeenWelcome', true);
+        
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/');
+        }
       }
     });
   }

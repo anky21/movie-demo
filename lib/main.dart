@@ -13,6 +13,9 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   final hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
   
+  // Reset welcome screen flag for new session
+  await prefs.setBool('hasSeenWelcome', false);
+  
   runApp(MyApp(hasSeenOnboarding: hasSeenOnboarding));
 }
 
@@ -29,7 +32,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         brightness: Brightness.dark,
       ),
-      initialRoute: hasSeenOnboarding ? '/' : '/onboarding',
+      initialRoute: hasSeenOnboarding ? '/welcome' : '/onboarding',
       routes: {
         '/': (context) => const HomeScreen(),
         '/onboarding': (context) => const OnboardingScreen(),
