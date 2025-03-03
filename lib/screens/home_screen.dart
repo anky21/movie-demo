@@ -4,6 +4,9 @@ import '../models/movie.dart';
 import '../services/tmdb_service.dart';
 import '../widgets/movie_card.dart';
 import 'dart:async';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import '../services/ads_service.dart';
+import 'movie_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -19,18 +22,23 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Movie> _popularMovies = [];
   bool _isLoading = true;
   Timer? _autoScrollTimer;
+  String? _errorMessage;
+  BannerAd? _bannerAd;
+  bool _isBannerAdReady = false;
 
   @override
   void initState() {
     super.initState();
     _loadMovies();
     _setupAutoScroll();
+    _loadBannerAd();
   }
 
   @override
   void dispose() {
     _autoScrollTimer?.cancel();
     _scrollController.dispose();
+    _bannerAd?.dispose();
     super.dispose();
   }
 
@@ -57,6 +65,15 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _loadBannerAd() {
+    _bannerAd = AdsService.createBannerAd()
+      ..load().then((value) {
+        setState(() {
+          _isBannerAdReady = true;
+        });
+      });
+  }
+
   Future<void> _loadMovies() async {
     try {
       final trendingResponse = await _tmdbService.getTrendingMovies();
@@ -72,10 +89,10 @@ class _HomeScreenState extends State<HomeScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to load movies')),
-      );
+      setState(() {
+        _errorMessage = 'Failed to load movies';
+        _isLoading = false;
+      });
     }
   }
 
@@ -107,77 +124,119 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        body: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : RefreshIndicator(
-                onRefresh: _loadMovies,
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                        child: Text(
-                          'Trending Now',
-                          style: GoogleFonts.poppins(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+        body: Stack(
+          children: [
+            _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _errorMessage != null
+                    ? Center(child: Text(_errorMessage!, style: const TextStyle(color: Colors.white)))
+                    : CustomScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        slivers: [
+                          SliverToBoxAdapter(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Padding(
+                                  padding: EdgeInsets.only(left: 16, top: 16, bottom: 8),
+                                  child: Text(
+                                    'Trending Now',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(
+                                  height: 340,
+                                  child: ListView.builder(
+                                    controller: _scrollController,
+                                    scrollDirection: Axis.horizontal,
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    itemCount: _trendingMovies.length,
+                                    itemBuilder: (context, index) {
+                                      return GestureDetector(
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => MovieDetailScreen(
+                                                movie: _trendingMovies[index],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        child: MovieCard(
+                                          movie: _trendingMovies[index],
+                                          isLarge: true,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ),
-                      SizedBox(
-                        height: 340,
-                        child: ListView.builder(
-                          controller: _scrollController,
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          itemCount: _trendingMovies.length,
-                          itemBuilder: (context, index) {
-                            return MovieCard(
-                              movie: _trendingMovies[index],
-                              isLarge: true,
-                            );
-                          },
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-                        child: Text(
-                          'Popular Movies',
-                          style: GoogleFonts.poppins(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 16, top: 16, bottom: 8),
+                              child: Row(
+                                children: const [
+                                  Text(
+                                    'Popular Movies',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          padding: const EdgeInsets.all(8),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 0.6,
-                            crossAxisSpacing: 8,
-                            mainAxisSpacing: 16,
+                          SliverPadding(
+                            padding: const EdgeInsets.all(8),
+                            sliver: SliverGrid(
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                childAspectRatio: 0.6,
+                                crossAxisSpacing: 8,
+                                mainAxisSpacing: 8,
+                              ),
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                                  return GestureDetector(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => MovieDetailScreen(
+                                            movie: _popularMovies[index],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: MovieCard(
+                                      movie: _popularMovies[index],
+                                      isLarge: false,
+                                    ),
+                                  );
+                                },
+                                childCount: _popularMovies.length,
+                              ),
+                            ),
                           ),
-                          itemCount: _popularMovies.length,
-                          itemBuilder: (context, index) {
-                            return MovieCard(
-                              movie: _popularMovies[index],
-                            );
-                          },
-                        ),
+                          // Add padding at the bottom for the banner ad
+                          SliverToBoxAdapter(
+                            child: SizedBox(height: _bannerAd?.size.height.toDouble() ?? 0),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 16),
-                    ],
-                  ),
-                ),
-              ),
+            // Banner ad at the bottom
+            AdsService.buildBannerAdWidget(_bannerAd, _isBannerAdReady),
+          ],
+        ),
       ),
     );
   }

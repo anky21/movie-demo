@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/home_screen.dart';
+import 'package:movies/services/ads_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AdsService.initialize();
   
   // Get the launch count
   final prefs = await SharedPreferences.getInstance();
